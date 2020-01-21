@@ -92,10 +92,10 @@ class PlacesPresenter(val activity: FragmentActivity, private val view: PlacesCo
         }
     }
 
-    override fun onViewModel() {
+    override fun onViewModel(placeType: String) {
         val viewModel = ViewModelProviders.of(activity).get(PlacesViewModel::class.java)
         viewModel.getPlaces(
-            "restaurant",
+            placeType,
             "" + currentLatLng?.latitude + "," + currentLatLng?.longitude,
             radius
         ).observe(activity, Observer { apiResponse ->

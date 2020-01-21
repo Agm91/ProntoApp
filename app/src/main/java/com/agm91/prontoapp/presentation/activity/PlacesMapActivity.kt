@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
@@ -27,6 +28,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import kotlinx.android.synthetic.main.fragment_places_map.*
 
 class PlacesMapActivity : FragmentActivity(),
     OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveListener,
@@ -56,12 +58,22 @@ class PlacesMapActivity : FragmentActivity(),
 
         presenter = PlacesPresenter(activity = this, view = this)
 
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.place_type,
+            android.R.layout.simple_spinner_item
+        ).also { adapter ->
+            // Specify the layout to use when the list of choices appears
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            // Apply the adapter to the spinner
+            binding.spinner.adapter = adapter
+        }
+
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
 
         binding.searchButton.setOnClickListener {
             onSearchButtonClick()
-            presenter.onViewModel()
         }
 
         replaceFragment()
@@ -144,6 +156,7 @@ class PlacesMapActivity : FragmentActivity(),
 
     override fun onCameraMove() {
         binding.searchButton.visibility = View.VISIBLE
+        binding.spinner.visibility = View.VISIBLE
     }
 
     override fun onItemClickListener(marker: Marker) {
@@ -190,7 +203,8 @@ class PlacesMapActivity : FragmentActivity(),
     override fun onSearchButtonClick() {
         drawCircleSearched(presenter.currentLatLng)
         binding.searchButton.visibility = View.GONE
-        presenter.onViewModel()
+        binding.spinner.visibility = View.GONE
+        presenter.onViewModel(binding.spinner.selectedItem.toString())
     }
 
     override fun replaceFragment() {

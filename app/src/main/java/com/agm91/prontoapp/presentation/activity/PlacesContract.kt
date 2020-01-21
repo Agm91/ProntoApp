@@ -24,7 +24,7 @@ interface PlacesContract {
     }
 
     interface Presenter {
-        fun onViewModel()
+        fun onViewModel(placeType: String)
         fun onDataReceived(apiResponse: ApiResponse<Places>)
         fun createMarkers(apiResponse: ApiResponse<Places>): List<Marker>
         fun checkPermissions()
