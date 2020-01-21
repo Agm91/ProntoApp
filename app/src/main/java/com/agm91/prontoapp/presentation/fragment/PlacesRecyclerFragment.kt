@@ -51,13 +51,14 @@ class PlacesRecyclerFragment : Fragment() {
         return binding.root
     }
 
-    fun show(){
+    fun show() {
         binding.recycler.visibility = View.VISIBLE
         binding.showButton.setImageResource(android.R.drawable.arrow_down_float)
     }
 
     private fun bind() {
-        binding.recycler.layoutManager = context?.let { SnappingLinearLayoutManager(it, LinearLayout.HORIZONTAL, false) }
+        binding.recycler.layoutManager =
+            context?.let { SnappingLinearLayoutManager(it, LinearLayout.HORIZONTAL, false) }
         binding.recycler.adapter = adapter
         binding.showButton.setOnClickListener {
             if (binding.recycler.visibility == View.GONE) {

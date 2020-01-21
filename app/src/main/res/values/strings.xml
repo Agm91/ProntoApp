@@ -7,4 +7,5 @@
     <string name="type">Type:</string>
     <string name="price_level_">Price level:</string>
     <string name="photo_link">https://maps.googleapis.com/maps/api/place/photo?photoreference=%s&amp;sensor=false&amp;maxheight=%d&amp;maxwidth=%d&amp;key=AIzaSyB00BsWrcR6n1KBk8ap9_Zqm2GPYBtJbdk</string>
+    <string name="error_try_later">Error. Please, try again later.</string>
 </resources>

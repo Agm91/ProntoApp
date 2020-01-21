@@ -1,53 +1,45 @@
 package com.agm91.prontoapp.presentation.activity
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.content.IntentSender
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
-import androidx.core.content.PermissionChecker
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import com.agm91.prontoapp.R
-import com.agm91.prontoapp.asLatLong
-import com.agm91.prontoapp.data.PlacesViewModel
 import com.agm91.prontoapp.databinding.FragmentPlacesMapBinding
 import com.agm91.prontoapp.presentation.adapter.PlacesAdapter
 import com.agm91.prontoapp.presentation.fragment.PlacesRecyclerFragment
 import com.agm91.prontoapp.presentation.view.CustomMarkerInfoView
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.location.*
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.LocationSettingsStatusCodes
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import com.google.maps.android.SphericalUtil
 
 class PlacesMapActivity : FragmentActivity(),
     OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveListener,
-    PlacesAdapter.OnItemClick, GoogleMap.OnMarkerClickListener {
+    PlacesAdapter.OnItemClick, GoogleMap.OnMarkerClickListener, PlacesContract.View {
     private lateinit var binding: FragmentPlacesMapBinding
 
     private val REQUEST_ACCESS_FINE_LOCATION = 12
     private lateinit var mMap: GoogleMap
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private var currentLatLng: LatLng? = null
+    private var circleToSearch: Circle? = null
+    private var circleSearched: Circle? = null
 
-    private var circle: Circle? = null
-    private var radius: Double = 1000.toDouble()
-
-    private var markers = mutableListOf<Marker>()
-
+    private lateinit var presenter: PlacesPresenter
     private var recyclerFragment: PlacesRecyclerFragment = PlacesRecyclerFragment.newInstance(null)
 
     init {
@@ -62,80 +54,24 @@ class PlacesMapActivity : FragmentActivity(),
             R.layout.fragment_places_map
         )
 
+        presenter = PlacesPresenter(activity = this, view = this)
+
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
         mapFragment?.getMapAsync(this)
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
         binding.searchButton.setOnClickListener {
-            binding.searchButton.visibility = View.GONE
-            val viewModel = ViewModelProviders.of(this).get(PlacesViewModel::class.java)
-            viewModel.getPlaces(
-                "restaurant",
-                "" + currentLatLng?.latitude + "," + currentLatLng?.longitude,
-                radius
-            ).observe(this, Observer { apiResponse ->
-                Log.d("Places", apiResponse.data.toString())
-                if (apiResponse.error == null
-                    && apiResponse.data?.status == "OK"
-                    && apiResponse.data?.results != null
-                ) {
-                    markers.forEach { it.remove() }
-                    markers = mutableListOf()
-                    for (result in apiResponse.data?.results!!) {
-                        val markerOptions =
-                            MarkerOptions().position(result.geometry.location.asLatLong())
-                                .title(result.name)
-                        val marker = mMap.addMarker(markerOptions)
-                        marker.tag = result
-                        markers.add(marker)
-                    }
-
-                    recyclerFragment.load(markers)
-
-                } else {
-                    //ERROr
-                }
-            })
+            onSearchButtonClick()
+            presenter.onViewModel()
         }
 
-        val transaction = supportFragmentManager.beginTransaction()
-        transaction.replace(R.id.container, recyclerFragment)
-        transaction.commit()
+        replaceFragment()
     }
 
-    fun checkPermissions() {
-        when (PermissionChecker.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )) {
-            PermissionChecker.PERMISSION_GRANTED -> {
-                setupMap()
-            }
-            else -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                requestPermissions(
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    REQUEST_ACCESS_FINE_LOCATION
-                )
-            } else {
-                ActivityCompat.requestPermissions(
-                    this@PlacesMapActivity,
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    REQUEST_ACCESS_FINE_LOCATION
-                )
-            }
-        }
-    }
-
-    fun setupMap() {
+    override fun setupMap() {
         mMap.isMyLocationEnabled = true
         mMap.uiSettings.isMyLocationButtonEnabled = true
         mMap.setOnCameraMoveListener(this)
 
-        val locationRequest = LocationRequest.create()
-        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        val builder = LocationSettingsRequest.Builder()
-            .addLocationRequest(locationRequest)
         askUserToTurnOnLocationIfNeeded()
     }
 
@@ -148,42 +84,16 @@ class PlacesMapActivity : FragmentActivity(),
         mMap.setOnCameraIdleListener(this)
         mMap.setOnMarkerClickListener(this)
 
-        checkPermissions()
-        addOnLocationSuccessListener()
-    }
-
-    fun addOnLocationSuccessListener() {
-        fusedLocationClient.lastLocation.addOnSuccessListener(this) { location ->
-            if (location != null) {
-                currentLatLng = LatLng(location.latitude, location.longitude)
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12f))
-            }
-        }
+        presenter.checkPermissions()
+        presenter.addOnLocationSuccessListener()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {
-            LocationRequest.PRIORITY_HIGH_ACCURACY -> {
-                when (resultCode) {
-                    Activity.RESULT_OK -> {
-                        // All required changes were successfully made
-                        Log.i("PlacesMapActivity", "onActivityResult: GPS Enabled by user")
-                        addOnLocationSuccessListener()
-                    }
-                    Activity.RESULT_CANCELED -> {
-                        // The user was asked to change settings, but chose not to
-                        Log.i(
-                            "PlacesMapActivity",
-                            "onActivityResult: User rejected GPS request"
-                        )
-                    }
-                }
-            }
-        }
+        presenter.onActivityResult(requestCode, resultCode, data)
     }
 
-    fun askUserToTurnOnLocationIfNeeded() {
+    override fun askUserToTurnOnLocationIfNeeded() {
         val locationRequest = LocationRequest.create()
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         val builder = LocationSettingsRequest.Builder()
@@ -220,20 +130,20 @@ class PlacesMapActivity : FragmentActivity(),
     }
 
     override fun onCameraIdle() {
-        val viewPort = mMap.projection.visibleRegion
-        val viewPortHeight =
-            SphericalUtil.computeDistanceBetween(viewPort.nearLeft, viewPort.farLeft)
-        val viewPortWidth =
-            SphericalUtil.computeDistanceBetween(viewPort.nearLeft, viewPort.nearRight)
+        val visibleRegion = mMap.projection.visibleRegion
+        presenter.onCameraIdle(visibleRegion)
+    }
 
-        Log.d("Map", "($viewPortWidth, $viewPortHeight)")
-        radius = if (viewPortWidth < viewPortHeight) viewPortWidth else viewPortHeight
-        drawCircle(currentLatLng)
+    override fun eraseCircle(circle: Circle) {
+        circle.remove()
+    }
+
+    override fun mapLatLong(): LatLng {
+        return mMap.cameraPosition.target
     }
 
     override fun onCameraMove() {
         binding.searchButton.visibility = View.VISIBLE
-        currentLatLng = mMap.cameraPosition.target
     }
 
     override fun onItemClickListener(marker: Marker) {
@@ -249,21 +159,82 @@ class PlacesMapActivity : FragmentActivity(),
         return true
     }
 
-    private fun drawCircle(point: LatLng?) {
-        circle?.remove()
-        if (point != null) {
-            // Instantiating CircleOptions to draw a circle around the marker
-            val circleOptions = CircleOptions()
-            circleOptions.apply {
-                center(point)
-                radius(radius)
-                strokeColor(Color.BLACK)
-                fillColor(0x30ff0000)
-                strokeWidth(2.toFloat())
-            }
-
-            // Adding the circle to the GoogleMap
-            circle = mMap.addCircle(circleOptions)
+    private fun createCircleOptions(latLng: LatLng?, fillColor: Int): CircleOptions {
+        val circleOptions = CircleOptions()
+        circleOptions.apply {
+            center(latLng)
+            radius(presenter.radius)
+            strokeColor(Color.BLACK)
+            fillColor(fillColor)
+            strokeWidth(2.toFloat())
         }
+        return circleOptions
+    }
+
+    override fun drawCircleToSearch(latLng: LatLng?) {
+        circleToSearch?.remove()
+        if (latLng != null) {
+            val circleOptions = createCircleOptions(latLng, 0x30ff0000)
+            circleToSearch = mMap.addCircle(circleOptions)
+        }
+    }
+
+    override fun drawCircleSearched(latLng: LatLng?) {
+        circleSearched?.remove()
+        if (latLng != null) {
+            val circleOptions = createCircleOptions(latLng, 0x3000FFFF)
+            circleSearched = mMap.addCircle(circleOptions)
+        }
+    }
+
+    override fun onSearchButtonClick() {
+        drawCircleSearched(presenter.currentLatLng)
+        binding.searchButton.visibility = View.GONE
+        presenter.onViewModel()
+    }
+
+    override fun replaceFragment() {
+        val transaction = supportFragmentManager.beginTransaction()
+        transaction.replace(R.id.container, recyclerFragment)
+        transaction.commit()
+    }
+
+    override fun requestPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                REQUEST_ACCESS_FINE_LOCATION
+            )
+        } else {
+            ActivityCompat.requestPermissions(
+                this@PlacesMapActivity,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                REQUEST_ACCESS_FINE_LOCATION
+            )
+        }
+    }
+
+    override fun moveCameraTo(point: LatLng) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(presenter.currentLatLng, 12f))
+    }
+
+    override fun addMarker(markerOptions: MarkerOptions): Marker {
+        return mMap.addMarker(markerOptions)
+    }
+
+    override fun loadMarkersOnFragment(markers: List<Marker>) {
+        recyclerFragment.load(markers)
+    }
+
+    override fun showError(t: Throwable?) {
+        Toast.makeText(
+            this,
+            getString(R.string.error_try_later) + "(${t?.message})",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    override fun showError() {
+        Toast.makeText(this, R.string.error_try_later, Toast.LENGTH_LONG).show()
     }
 }
