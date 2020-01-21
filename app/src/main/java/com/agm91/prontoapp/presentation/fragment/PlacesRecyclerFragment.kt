@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import com.agm91.prontoapp.BaseApplication
 import com.agm91.prontoapp.R
 import com.agm91.prontoapp.databinding.FragmentListPlacesBinding
 import com.agm91.prontoapp.presentation.adapter.PlacesAdapter
@@ -21,11 +22,6 @@ class PlacesRecyclerFragment : Fragment() {
     private var listener: PlacesAdapter.OnItemClick? = null
 
     private lateinit var markers: List<Marker>
-
-    override fun onAttach(context: Context) {
-        //(context.applicationContext as MyApplication).appComponent.inject(this)
-        super.onAttach(context)
-    }
 
     fun setListener(listener: PlacesAdapter.OnItemClick) {
         adapter = PlacesAdapter(listener)

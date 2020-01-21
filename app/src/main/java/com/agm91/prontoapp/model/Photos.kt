@@ -19,14 +19,12 @@ data class Photos(
         @JvmStatic
         @BindingAdapter("loadPhotos")
         fun loadPhotos(view: MultiImageView, photos: List<Photos>?) {
-            view.shape = MultiImageView.Shape.RECTANGLE
             val target = object : com.squareup.picasso.Target {
                 override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
                 override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {}
                 override fun onBitmapLoaded(bitmap: Bitmap?, from: Picasso.LoadedFrom?) {
                     bitmap?.let { view.addImage(it) }
                 }
-
             }
             photos?.forEach { photo ->
                 val url = view.context.getString(
@@ -35,28 +33,16 @@ data class Photos(
                     photo.height,
                     photo.width
                 )
-                Picasso.get().load(url).into(target)
+                Picasso.get().load(url)
+                    .into(target)
             }
-        }
-
-        @JvmStatic
-        @BindingAdapter("loadUrlOnMultiImage")
-        fun loadUrlOnMultiImage(view: MultiImageView, url: String?) {
-            val target = object : com.squareup.picasso.Target {
-                override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
-                override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {}
-                override fun onBitmapLoaded(bitmap: Bitmap?, from: Picasso.LoadedFrom?) {
-                    bitmap?.let { view.addImage(it) }
-                }
-
-            }
-            Picasso.get().load(url).into(target)
         }
 
         @JvmStatic
         @BindingAdapter("loadUrlOnImage")
         fun loadUrlOnImage(view: ImageView, url: String?) {
-            Picasso.get().load(url).into(view)
+            Picasso.get().load(url)
+                .into(view)
         }
     }
 }

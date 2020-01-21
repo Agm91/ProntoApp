@@ -14,6 +14,8 @@ import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.FragmentActivity
 import com.agm91.prontoapp.R
 import com.agm91.prontoapp.databinding.FragmentPlacesMapBinding
+import com.agm91.prontoapp.model.dagger.ActivityModule
+import com.agm91.prontoapp.model.dagger.DaggerActivityComponent
 import com.agm91.prontoapp.presentation.adapter.PlacesAdapter
 import com.agm91.prontoapp.presentation.fragment.PlacesRecyclerFragment
 import com.agm91.prontoapp.presentation.view.CustomMarkerInfoView
@@ -28,11 +30,14 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
-import kotlinx.android.synthetic.main.fragment_places_map.*
+import javax.inject.Inject
 
 class PlacesMapActivity : FragmentActivity(),
     OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveListener,
     PlacesAdapter.OnItemClick, GoogleMap.OnMarkerClickListener, PlacesContract.View {
+    @Inject
+    lateinit var presenter: PlacesPresenter
+
     private lateinit var binding: FragmentPlacesMapBinding
 
     private val REQUEST_ACCESS_FINE_LOCATION = 12
@@ -41,7 +46,6 @@ class PlacesMapActivity : FragmentActivity(),
     private var circleToSearch: Circle? = null
     private var circleSearched: Circle? = null
 
-    private lateinit var presenter: PlacesPresenter
     private var recyclerFragment: PlacesRecyclerFragment = PlacesRecyclerFragment.newInstance(null)
 
     init {
@@ -49,6 +53,7 @@ class PlacesMapActivity : FragmentActivity(),
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        DaggerActivityComponent.builder().activityModule(ActivityModule(this)).build().inject(this)
         super.onCreate(savedInstanceState)
 
         binding = DataBindingUtil.setContentView(
@@ -56,16 +61,12 @@ class PlacesMapActivity : FragmentActivity(),
             R.layout.fragment_places_map
         )
 
-        presenter = PlacesPresenter(activity = this, view = this)
-
         ArrayAdapter.createFromResource(
             this,
             R.array.place_type,
             android.R.layout.simple_spinner_item
         ).also { adapter ->
-            // Specify the layout to use when the list of choices appears
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            // Apply the adapter to the spinner
             binding.spinner.adapter = adapter
         }
 
@@ -160,11 +161,12 @@ class PlacesMapActivity : FragmentActivity(),
     }
 
     override fun onItemClickListener(marker: Marker) {
-
+        marker.showInfoWindow()
+        moveCameraTo(marker.position, 17f)
     }
 
-    override fun onMarkerClick(p0: Marker?): Boolean {
-        p0?.let {
+    override fun onMarkerClick(marker: Marker?): Boolean {
+        marker?.let {
             recyclerFragment.show()
             it.showInfoWindow()
             recyclerFragment.moveTo(it)
@@ -228,8 +230,8 @@ class PlacesMapActivity : FragmentActivity(),
         }
     }
 
-    override fun moveCameraTo(point: LatLng) {
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(presenter.currentLatLng, 12f))
+    override fun moveCameraTo(point: LatLng, zoom: Float) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(point, zoom))
     }
 
     override fun addMarker(markerOptions: MarkerOptions): Marker {

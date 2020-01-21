@@ -8,21 +8,10 @@ import com.agm91.prontoapp.model.Places
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import javax.inject.Inject
 
-class PlacesRepository {
-    private var api: MapsApi
+class PlacesRepository @Inject constructor(private val api: MapsApi) {
     private var data = MutableLiveData<ApiResponse<Places>>()
-
-    init {
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://maps.googleapis.com/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        api = retrofit.create(MapsApi::class.java)
-    }
 
     fun getPlaces(type: String, location: String, radius: Double): LiveData<ApiResponse<Places>> {
         val apiKey = BaseApplication.instance.applicationContext.getString(
