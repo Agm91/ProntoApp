@@ -12,6 +12,11 @@ ext {
     retrofitVersion = '2.6.2'
     gsonVersion = '2.3.0'
     recyclerVersion = '28.0.0'
+    locationVersion = '17.0.0'
+    mapUtilsVersion = '0.5'
+    multiViewVersion = '0.1'
+    constraintVersion = '1.1.3'
+    mapsVersion = '17.0.0'
 }
 
 android {
@@ -41,9 +46,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.core:core-ktx:1.1.0'
-    implementation 'com.google.android.gms:play-services-maps:17.0.0'
-
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation "com.google.android.gms:play-services-maps:$mapsVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constraintVersion"
     implementation "android.arch.lifecycle:extensions:$lifecycleVersion"
     implementation "androidx.cardview:cardview:$cardViewVersion"
     implementation "com.android.support:design:$designVersion"
@@ -54,9 +58,9 @@ dependencies {
     kapt "com.google.dagger:dagger-compiler:$daggerVersion"
     kaptTest "com.google.dagger:dagger-compiler:$daggerVersion"
     implementation "com.squareup.picasso:picasso:$picassoVersion"
-    implementation 'com.google.android.gms:play-services-location:17.0.0'
-    implementation 'com.google.maps.android:android-maps-utils:0.5'
-    implementation 'com.github.stfalcon:multiimageview:0.1'
+    implementation "com.google.android.gms:play-services-location:$locationVersion"
+    implementation "com.google.maps.android:android-maps-utils:$mapUtilsVersion"
+    implementation "com.github.stfalcon:multiimageview:$multiViewVersion"
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'

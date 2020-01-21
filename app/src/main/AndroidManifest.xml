@@ -18,8 +18,7 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".presentation.activity.PlacesMapActivity"
-            android:label="@string/title_activity_maps">
+            android:name=".presentation.activity.PlacesMapActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

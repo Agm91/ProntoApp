@@ -10,7 +10,7 @@ interface PlacesContract {
         fun onSearchButtonClick()
         fun replaceFragment()
         fun requestPermissions()
-        fun moveCameraTo(point: LatLng)
+        fun moveCameraTo(point: LatLng, zoom: Float = 15f)
         fun askUserToTurnOnLocationIfNeeded()
         fun mapLatLong(): LatLng
         fun loadMarkersOnFragment(markers: List<Marker>)

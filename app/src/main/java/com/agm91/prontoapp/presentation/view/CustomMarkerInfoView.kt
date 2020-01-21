@@ -15,7 +15,7 @@ import com.google.android.gms.maps.model.Marker
 import com.squareup.picasso.Picasso
 
 class CustomMarkerInfoView(private val context: Context) : GoogleMap.InfoWindowAdapter {
-    lateinit var binding: ViewMarkerBinding
+    private lateinit var binding: ViewMarkerBinding
 
     private var marker: Marker? = null
     private var listener: GoogleMap.OnMarkerClickListener =
@@ -23,7 +23,7 @@ class CustomMarkerInfoView(private val context: Context) : GoogleMap.InfoWindowA
 
     private val markerSet = mutableSetOf<String>()
 
-    val target = object : com.squareup.picasso.Target {
+    private val target = object : com.squareup.picasso.Target {
         override fun onPrepareLoad(placeHolderDrawable: Drawable?) {}
         override fun onBitmapFailed(e: Exception?, errorDrawable: Drawable?) {}
         override fun onBitmapLoaded(bitmap: Bitmap?, from: Picasso.LoadedFrom?) {
@@ -59,7 +59,8 @@ class CustomMarkerInfoView(private val context: Context) : GoogleMap.InfoWindowA
 
             if (!markerSet.contains(url)) {
                 markerSet.add(url)
-                Picasso.get().load(url).into(target)
+                Picasso.get().load(url)
+                    .into(target)
             }
         }
 

@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">ProntoApp</string>
-    <string name="title_activity_maps">Map</string>
     <string name="search_this_area">Search</string>
     <string name="rating_">Rating:</string>
     <string name="users_rated_">Users rated:</string>

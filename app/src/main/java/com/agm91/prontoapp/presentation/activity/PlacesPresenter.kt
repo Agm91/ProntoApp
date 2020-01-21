@@ -7,7 +7,6 @@ import android.util.Log
 import androidx.core.content.PermissionChecker
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
 import com.agm91.prontoapp.asLatLong
 import com.agm91.prontoapp.data.ApiResponse
 import com.agm91.prontoapp.data.PlacesViewModel
@@ -20,9 +19,12 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.VisibleRegion
 import com.google.maps.android.SphericalUtil
+import javax.inject.Inject
 
-class PlacesPresenter(val activity: FragmentActivity, private val view: PlacesContract.View) :
-    PlacesContract.Presenter {
+class PlacesPresenter @Inject constructor(var viewModel: PlacesViewModel,
+    private val activity: FragmentActivity
+) : PlacesContract.Presenter {
+    private val view = activity as PlacesContract.View
     private var markers = mutableListOf<Marker>()
     private var fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(activity)
@@ -93,7 +95,6 @@ class PlacesPresenter(val activity: FragmentActivity, private val view: PlacesCo
     }
 
     override fun onViewModel(placeType: String) {
-        val viewModel = ViewModelProviders.of(activity).get(PlacesViewModel::class.java)
         viewModel.getPlaces(
             placeType,
             "" + currentLatLng?.latitude + "," + currentLatLng?.longitude,
