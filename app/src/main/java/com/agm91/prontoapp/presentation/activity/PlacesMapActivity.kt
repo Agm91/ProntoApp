@@ -4,9 +4,9 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.IntentSender
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.View
 import androidx.core.app.ActivityCompat
@@ -19,6 +19,7 @@ import com.agm91.prontoapp.R
 import com.agm91.prontoapp.asLatLong
 import com.agm91.prontoapp.data.PlacesViewModel
 import com.agm91.prontoapp.databinding.FragmentPlacesMapBinding
+import com.agm91.prontoapp.presentation.adapter.PlacesAdapter
 import com.agm91.prontoapp.presentation.fragment.PlacesRecyclerFragment
 import com.agm91.prontoapp.presentation.view.CustomMarkerInfoView
 import com.google.android.gms.common.api.ApiException
@@ -28,26 +29,30 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
-import kotlin.math.cos
-import kotlin.math.pow
+import com.google.android.gms.maps.model.*
+import com.google.maps.android.SphericalUtil
 
 class PlacesMapActivity : FragmentActivity(),
-    OnMapReadyCallback, GoogleMap.OnMarkerClickListener, GoogleMap.OnCameraMoveListener {
-
+    OnMapReadyCallback, GoogleMap.OnCameraIdleListener, GoogleMap.OnCameraMoveListener,
+    PlacesAdapter.OnItemClick, GoogleMap.OnMarkerClickListener {
     private lateinit var binding: FragmentPlacesMapBinding
 
     private val REQUEST_ACCESS_FINE_LOCATION = 12
     private lateinit var mMap: GoogleMap
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var currentLatLng: LatLng
+    private var currentLatLng: LatLng? = null
+
+    private var circle: Circle? = null
+    private var radius: Double = 1000.toDouble()
 
     private var markers = mutableListOf<Marker>()
 
-    val recyclerFragment = PlacesRecyclerFragment.newInstance(null)
+    private var recyclerFragment: PlacesRecyclerFragment = PlacesRecyclerFragment.newInstance(null)
+
+    init {
+        recyclerFragment.setListener(this@PlacesMapActivity)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +63,7 @@ class PlacesMapActivity : FragmentActivity(),
         )
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
-        mapFragment!!.getMapAsync(this)
+        mapFragment?.getMapAsync(this)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -67,19 +72,16 @@ class PlacesMapActivity : FragmentActivity(),
             val viewModel = ViewModelProviders.of(this).get(PlacesViewModel::class.java)
             viewModel.getPlaces(
                 "restaurant",
-                "" + currentLatLng.latitude + "," + currentLatLng.longitude,
-                1000.toDouble()
+                "" + currentLatLng?.latitude + "," + currentLatLng?.longitude,
+                radius
             ).observe(this, Observer { apiResponse ->
                 Log.d("Places", apiResponse.data.toString())
                 if (apiResponse.error == null
                     && apiResponse.data?.status == "OK"
                     && apiResponse.data?.results != null
                 ) {
-                    recyclerFragment.load(apiResponse.data!!.results)
-                    markers.apply {
-                        forEach { it.remove() }
-                        emptyList<Marker>()
-                    }
+                    markers.forEach { it.remove() }
+                    markers = mutableListOf()
                     for (result in apiResponse.data?.results!!) {
                         val markerOptions =
                             MarkerOptions().position(result.geometry.location.asLatLong())
@@ -88,6 +90,8 @@ class PlacesMapActivity : FragmentActivity(),
                         marker.tag = result
                         markers.add(marker)
                     }
+
+                    recyclerFragment.load(markers)
 
                 } else {
                     //ERROr
@@ -138,22 +142,21 @@ class PlacesMapActivity : FragmentActivity(),
     override fun onMapReady(map: GoogleMap) {
         mMap = map
 
-        val customInfoWindow = CustomMarkerInfoView(this)
-        mMap.setInfoWindowAdapter(customInfoWindow)
+        val customMarker = CustomMarkerInfoView(this)
+        mMap.setInfoWindowAdapter(customMarker)
+
+        mMap.setOnCameraIdleListener(this)
+        mMap.setOnMarkerClickListener(this)
 
         checkPermissions()
         addOnLocationSuccessListener()
     }
 
     fun addOnLocationSuccessListener() {
-        //TODO: val dragged =
-        if (false) {
-
-            fusedLocationClient.lastLocation.addOnSuccessListener(this) { location ->
-                if (location != null) {
-                    currentLatLng = LatLng(location.latitude, location.longitude)
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12f))
-                }
+        fusedLocationClient.lastLocation.addOnSuccessListener(this) { location ->
+            if (location != null) {
+                currentLatLng = LatLng(location.latitude, location.longitude)
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 12f))
             }
         }
     }
@@ -216,8 +219,16 @@ class PlacesMapActivity : FragmentActivity(),
         }
     }
 
-    override fun onMarkerClick(p0: Marker?): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onCameraIdle() {
+        val viewPort = mMap.projection.visibleRegion
+        val viewPortHeight =
+            SphericalUtil.computeDistanceBetween(viewPort.nearLeft, viewPort.farLeft)
+        val viewPortWidth =
+            SphericalUtil.computeDistanceBetween(viewPort.nearLeft, viewPort.nearRight)
+
+        Log.d("Map", "($viewPortWidth, $viewPortHeight)")
+        radius = if (viewPortWidth < viewPortHeight) viewPortWidth else viewPortHeight
+        drawCircle(currentLatLng)
     }
 
     override fun onCameraMove() {
@@ -225,16 +236,34 @@ class PlacesMapActivity : FragmentActivity(),
         currentLatLng = mMap.cameraPosition.target
     }
 
-    fun fromCameraToRadius(): Double {
-        Log.d("Zoom", mMap.cameraPosition.zoom.toString())
-        val metersPerPixel =
-            cos(currentLatLng.latitude * Math.PI / 180) * 2 * Math.PI * 6378137 / (256 * 2.toDouble().pow(
-                mMap.cameraPosition.zoom.toDouble()
-            ))
-        val displayMetrics = DisplayMetrics()
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val width = displayMetrics.widthPixels
-        Log.d("Zoom", "radius: " + (metersPerPixel * width).toString())
-        return (metersPerPixel * width)
+    override fun onItemClickListener(marker: Marker) {
+
+    }
+
+    override fun onMarkerClick(p0: Marker?): Boolean {
+        p0?.let {
+            recyclerFragment.show()
+            it.showInfoWindow()
+            recyclerFragment.moveTo(it)
+        }
+        return true
+    }
+
+    private fun drawCircle(point: LatLng?) {
+        circle?.remove()
+        if (point != null) {
+            // Instantiating CircleOptions to draw a circle around the marker
+            val circleOptions = CircleOptions()
+            circleOptions.apply {
+                center(point)
+                radius(radius)
+                strokeColor(Color.BLACK)
+                fillColor(0x30ff0000)
+                strokeWidth(2.toFloat())
+            }
+
+            // Adding the circle to the GoogleMap
+            circle = mMap.addCircle(circleOptions)
+        }
     }
 }
