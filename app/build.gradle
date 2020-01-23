@@ -21,6 +21,7 @@ ext {
 
 android {
     compileSdkVersion 28
+    testOptions.unitTests.includeAndroidResources = true
     buildToolsVersion "29.0.0"
     defaultConfig {
         applicationId "com.agm91.prontoapp"
@@ -62,7 +63,10 @@ dependencies {
     implementation "com.google.maps.android:android-maps-utils:$mapUtilsVersion"
     implementation "com.github.stfalcon:multiimageview:$multiViewVersion"
 
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test:runner:1.2.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    testImplementation 'org.robolectric:robolectric:4.3'
+    testImplementation 'androidx.test.ext:truth:1.2.0'
+    testImplementation 'com.google.truth:truth:1.0'
+    testImplementation 'io.mockk:mockk:1.9.3'
+    testImplementation 'androidx.test:rules:1.2.0'
+    testImplementation 'androidx.arch.core:core-testing:2.1.0'
 }

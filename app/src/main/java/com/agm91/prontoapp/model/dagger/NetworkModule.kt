@@ -9,12 +9,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 @Module
 open class NetworkModule {
     @Provides
-    fun provideMapsApi(retrofit: Retrofit): MapsApi {
+    open fun provideMapsApi(retrofit: Retrofit): MapsApi {
         return retrofit.create(MapsApi::class.java)
     }
 
     @Provides
-    fun provideRetrofit(): Retrofit {
+    open fun provideRetrofit(): Retrofit {
         return Retrofit.Builder()
             .baseUrl("https://maps.googleapis.com/")
             .addConverterFactory(GsonConverterFactory.create())
