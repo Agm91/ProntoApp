@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.PermissionChecker
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
@@ -21,7 +22,8 @@ import com.google.android.gms.maps.model.VisibleRegion
 import com.google.maps.android.SphericalUtil
 import javax.inject.Inject
 
-class PlacesPresenter @Inject constructor(var viewModel: PlacesViewModel,
+class PlacesPresenter @Inject constructor(
+    var viewModel: PlacesViewModel,
     private val activity: FragmentActivity
 ) : PlacesContract.Presenter {
     private val view = activity as PlacesContract.View
@@ -43,6 +45,9 @@ class PlacesPresenter @Inject constructor(var viewModel: PlacesViewModel,
             view.showError(apiResponse.error)
         }
     }
+
+    @VisibleForTesting
+    fun getMarkers() = markers
 
     override fun createMarkers(apiResponse: ApiResponse<Places>): List<Marker> {
         markers.forEach { it.remove() }

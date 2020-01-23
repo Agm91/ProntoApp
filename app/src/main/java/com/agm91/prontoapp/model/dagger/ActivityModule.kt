@@ -7,14 +7,14 @@ import dagger.Module
 import dagger.Provides
 
 @Module
-class ActivityModule(private var activity: PlacesMapActivity) {
+open class ActivityModule(private var activity: PlacesMapActivity) {
     @Provides
-    fun provideActivity(): PlacesMapActivity {
+    open fun provideActivity(): PlacesMapActivity {
         return activity
     }
 
     @Provides
-    fun providePresenter(viewModel: PlacesViewModel): PlacesPresenter {
+    open fun providePresenter(viewModel: PlacesViewModel): PlacesPresenter {
         return PlacesPresenter(viewModel, activity)
     }
 }
